@@ -1,0 +1,19 @@
+import { Users, UserCheck, UserX, Clock3 } from 'lucide-react';
+import AppShell from '@/components/AppShell';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+
+export default async function AdminPage(){
+ const supabase=await createServerSupabaseClient();
+ const {data:{user}}=await supabase.auth.getUser();
+ const {data:profile}=await supabase.from('profiles').select('role,full_name').eq('id',user?.id ?? '').single();
+ if(!profile || !['manager','admin'].includes(profile.role)) return <AppShell><div className="surface rounded-3xl p-10 text-center"><h1 className="text-2xl font-bold">Access denied</h1><p className="mt-2 text-slate-500">This workspace is available to managers and administrators.</p></div></AppShell>;
+ const today=new Date().toISOString().slice(0,10);
+ const [{count:total},{count:present},{data:att}]=await Promise.all([
+  supabase.from('profiles').select('*',{count:'exact',head:true}).eq('role','instructor').eq('is_active',true),
+  supabase.from('attendance').select('*',{count:'exact',head:true}).eq('attendance_date',today),
+  supabase.from('attendance').select('*,profiles(full_name,email)').eq('attendance_date',today).order('check_in_at',{ascending:true})
+ ]);
+ const late=(att??[]).filter(a=>new Date(a.check_in_at).toLocaleTimeString('en-IN',{hour12:false,hour:'2-digit',minute:'2-digit'})>'10:30').length;
+ return <AppShell><div><div className="flex flex-col justify-between gap-3 md:flex-row md:items-end"><div><p className="text-sm font-semibold text-indigo-600">Operations</p><h1 className="mt-1 text-3xl font-bold">Attendance overview</h1><p className="mt-1 text-slate-500">Welcome, {profile.full_name}.</p></div><div className="rounded-xl bg-white/70 px-4 py-2 text-sm text-slate-500">Today · {new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</div></div><div className="mt-7 grid gap-5 md:grid-cols-4"><Stat title="Total instructors" value={total??0} icon={<Users/>}/><Stat title="Present today" value={present??0} icon={<UserCheck/>}/><Stat title="Not checked in" value={Math.max((total??0)-(present??0),0)} icon={<UserX/>}/><Stat title="Late arrivals" value={late} icon={<Clock3/>}/></div><div className="surface mt-7 overflow-hidden rounded-2xl"><div className="flex items-center justify-between px-5 py-4"><h2 className="font-semibold">Today&apos;s check-ins</h2><span className="text-xs text-slate-400">{att?.length??0} records</span></div><div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-slate-50 text-slate-500"><tr><th className="px-5 py-3">Instructor</th><th className="px-5 py-3">Time</th><th className="px-5 py-3">Status</th><th className="px-5 py-3">Selfie</th></tr></thead><tbody className="divide-y divide-slate-100">{(att??[]).map(a=><tr key={a.id}><td className="px-5 py-4"><div className="font-medium">{a.profiles?.full_name??'Unknown'}</div><div className="text-xs text-slate-400">{a.profiles?.email}</div></td><td className="px-5 py-4">{new Date(a.check_in_at).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</td><td className="px-5 py-4"><span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">{a.status}</span></td><td className="px-5 py-4 text-slate-400">Private storage</td></tr>)}{(!att||att.length===0)&&<tr><td colSpan={4} className="px-5 py-12 text-center text-slate-400">No check-ins today.</td></tr>}</tbody></table></div></div></div></AppShell>;
+}
+function Stat({title,value,icon}:{title:string,value:number,icon:React.ReactNode}){return <div className="surface rounded-2xl p-5"><div className="flex items-center justify-between"><span className="text-sm text-slate-500">{title}</span><span className="text-indigo-500">{icon}</span></div><div className="mt-4 text-3xl font-bold">{value}</div></div>}
