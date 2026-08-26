@@ -1,0 +1,9 @@
+import AppShell from '@/components/AppShell';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+
+export default async function InstructorsPage(){
+ const supabase=await createServerSupabaseClient(); const {data:{user}}=await supabase.auth.getUser(); const {data:me}=await supabase.from('profiles').select('role').eq('id',user?.id??'').single();
+ if(!me||me.role!=='admin') return <AppShell><div className="surface rounded-3xl p-10 text-center"><h1 className="text-2xl font-bold">Admin access required</h1></div></AppShell>;
+ const {data}=await supabase.from('profiles').select('*').eq('role','instructor').order('full_name');
+ return <AppShell><div><p className="text-sm font-semibold text-indigo-600">People</p><h1 className="mt-1 text-3xl font-bold">Instructors</h1><p className="mt-1 text-slate-500">Manage active instructor profiles. Create Auth users through a trusted admin workflow.</p><div className="surface mt-7 overflow-hidden rounded-2xl"><div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-slate-50 text-slate-500"><tr><th className="px-5 py-3">Name</th><th className="px-5 py-3">Email</th><th className="px-5 py-3">Status</th><th className="px-5 py-3">Created</th></tr></thead><tbody className="divide-y divide-slate-100">{(data??[]).map(p=><tr key={p.id}><td className="px-5 py-4 font-medium">{p.full_name}</td><td className="px-5 py-4 text-slate-600">{p.email}</td><td className="px-5 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${p.is_active?'bg-emerald-50 text-emerald-700':'bg-slate-100 text-slate-500'}`}>{p.is_active?'Active':'Inactive'}</span></td><td className="px-5 py-4 text-slate-500">{new Date(p.created_at).toLocaleDateString('en-IN')}</td></tr>)}{(!data||data.length===0)&&<tr><td colSpan={4} className="px-5 py-12 text-center text-slate-400">No instructor profiles found.</td></tr>}</tbody></table></div></div></div></AppShell>;
+}
