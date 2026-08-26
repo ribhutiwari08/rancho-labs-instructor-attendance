@@ -1,0 +1,10 @@
+import AppShell from '@/components/AppShell';
+import { ShieldCheck, Database, Clock3 } from 'lucide-react';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+
+export default async function SettingsPage(){
+ const supabase=await createServerSupabaseClient(); const {data:{user}}=await supabase.auth.getUser(); const {data:p}=await supabase.from('profiles').select('role').eq('id',user?.id??'').single();
+ if(!p||p.role!=='admin')return <AppShell><div className="surface rounded-3xl p-10 text-center"><h1 className="text-2xl font-bold">Admin access required</h1></div></AppShell>;
+ return <AppShell><div className="max-w-4xl"><p className="text-sm font-semibold text-indigo-600">System</p><h1 className="mt-1 text-3xl font-bold">Settings</h1><div className="mt-7 grid gap-5 md:grid-cols-3"><Info icon={<ShieldCheck/>} title="Security" text="Supabase Auth, Postgres RLS and private selfie storage are enabled by the migration."/><Info icon={<Database/>} title="Data retention" text="Attendance and selfie data are intended to remain active for 60 days before archive-first cleanup."/><Info icon={<Clock3/>} title="Timezone" text="Attendance calendar dates are computed using Asia/Kolkata so device clocks do not define the official date."/></div><div className="surface mt-6 rounded-2xl p-6"><h2 className="font-semibold">Production checklist</h2><ul className="mt-4 space-y-2 text-sm text-slate-600"><li>• Add production Supabase environment variables in Vercel.</li><li>• Run the SQL migration in Supabase.</li><li>• Create Auth users and matching profile rows through a trusted admin flow.</li><li>• Configure the scheduled retention endpoint using CRON_SECRET.</li></ul></div></div></AppShell>;
+}
+function Info({icon,title,text}:{icon:React.ReactNode,title:string,text:string}){return <div className="surface rounded-2xl p-5"><div className="text-indigo-600">{icon}</div><h2 className="mt-4 font-semibold">{title}</h2><p className="mt-2 text-sm leading-6 text-slate-500">{text}</p></div>}
