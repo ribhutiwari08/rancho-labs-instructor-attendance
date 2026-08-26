@@ -14,17 +14,19 @@ export async function createServerSupabaseClient() {
         },
 
         setAll(
-          cookiesToSet: {
+          cookiesToSet: Array<{
             name: string;
             value: string;
-            options: any;
-          }[]
+            options: Record<string, unknown>;
+          }>
         ) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {}
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
+          } catch {
+            // Ignore errors when cookies cannot be set from this context
+          }
         },
       },
     }
